@@ -1,12 +1,15 @@
 """# Project Objectives & Data Sources
 
-geospatial analysis of cities near Holocene volcanoes. this script pulls in volcano,
-city and country data, finds large cities within 100 km of a vent and plots the results.
-datasets used:
+This script analyses population exposure around Holocene volcanoes.
+The 100 km threshold is a simple proxy for the reach of ashfall, lahars and other
+eruptive hazards, giving a first-pass look at communities likely to be affected.
+It loads volcano, city and country data, finds large cities within that distance
+and plots the results.
 
-- smithsonian volcanoes of the world - https://pacific-data.sprep.org/resource/volcanoes-world-holocene#:~:text=Global%20Volcanism%20Program%2C%202013,2013
-- natural earth populated places - https://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-populated-places/
-- natural earth admin 0 countries - https://www.naturalearthdata.com/downloads/50m-cultural-vectors/50m-admin-0-countries/
+Datasets used:
+- Smithsonian Volcanoes of the World: https://pacific-data.sprep.org/resource/volcanoes-world-holocene#:~:text=Global%20Volcanism%20Program%2C%202013,2013
+- Natural Earth Populated Places: https://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-populated-places/
+- Natural Earth Admin 0 Countries: https://www.naturalearthdata.com/downloads/50m-cultural-vectors/50m-admin-0-countries/
 """
 
 from __future__ import annotations
@@ -85,7 +88,18 @@ def inspect(gdf: gpd.GeoDataFrame, name: str) -> None:
 
 
 def compute_hazard_rings(volcanoes: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-    """make polygons for distance bands around volcanoes"""
+    """Make polygons for concentric distance bands around volcanoes.
+
+    Parameters
+    ----------
+    volcanoes : GeoDataFrame
+        Point locations of volcano vents in a projected CRS.
+
+    Returns
+    -------
+    GeoDataFrame
+        Polygon rings (one row per tier) sharing the CRS of *volcanoes*.
+    """
 
     # distance bands to build. each tuple is (inner_km, outer_km, label)
     # the first one starts at 0 so it covers the area right around the vent
@@ -116,7 +130,20 @@ def compute_hazard_rings(volcanoes: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
 def classify_cities(
     cities: gpd.GeoDataFrame, volcanoes: gpd.GeoDataFrame
 ) -> gpd.GeoDataFrame:
-    """tag each city with a hazard tier based on its nearest volcano"""
+    """Tag each city with a hazard tier based on its nearest volcano.
+
+    Parameters
+    ----------
+    cities : GeoDataFrame
+        Settlements to classify in the same CRS as *volcanoes*.
+    volcanoes : GeoDataFrame
+        Volcano point locations.
+
+    Returns
+    -------
+    GeoDataFrame
+        City records with added ``hazard`` and ``dist_km`` columns.
+    """
 
     # use a spatial join to find the closest volcano and measure the distance
     # ``sjoin_nearest`` returns the index and distance in the layer's CRS
@@ -346,6 +373,16 @@ def main() -> None:
         )
         print(tier_tbl)
 
+        from IPython.display import Markdown, display as ipydisplay
+        _hi = int(tier_tbl.loc["High", "Cities"]) if "High" in tier_tbl.index else 0
+        _lo = int(tier_tbl.loc["Low", "Cities"]) if "Low" in tier_tbl.index else 0
+        _pop = int(tier_tbl["Pop"].sum())
+        msg = (
+            "### hazard tier summary\n"
+            f"~{_hi} cities are ≤10 km; ~{_lo} are 50–100 km; total exposed pop ≈ {_pop:,}"
+        )
+        ipydisplay(Markdown(msg))
+
         # load a base world map for context
         world = load_layer(COUNTRIES_SHP, "Admin-0 countries")
 
@@ -440,9 +477,21 @@ def main() -> None:
         summary_md += f"top country: {exposure_by_ctry.index[0]} ({int(exposure_by_ctry.iloc[0].exposed_pop):,})"
         ipydisplay(Markdown(summary_md))
 
+        limits_md = (
+            "### Limitations & next steps\n"
+            "- Mercator distortion\n"
+            "- Buffer-radius simplification\n"
+            "- Could weight by VEI or use population grids."
+        )
+        ipydisplay(Markdown(limits_md))
+
     except FileNotFoundError as e:
         print(f"missing data: {e}")
 
 
 if __name__ == "__main__":
     main()
+
+
+# %% [code]
+# !pip install geopandas shapely folium matplotlib pandas
