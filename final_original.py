@@ -1,4 +1,3 @@
-# %% [markdown]
 """# Project Objectives & Data Sources
 
 geospatial analysis of cities near Holocene volcanoes. this script pulls in volcano,
