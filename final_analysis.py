@@ -35,13 +35,6 @@ def load_layer(path: Path, name: str) -> gpd.GeoDataFrame:
     return gdf
 
 
-def inspect(gdf: gpd.GeoDataFrame, name: str) -> None:
-    print(f"
-{name}:")
-    print(f"  Records : {len(gdf):,}")
-    print(f"  CRS     : {gdf.crs}")
-    print(f"  Columns : {list(gdf.columns)[:10]} ...")
-    print(gdf.head(3))
 
 
 # ------------------ Analysis helpers ------------------
