@@ -350,10 +350,76 @@ def main() -> None:
     print(tier_tbl)
 
     # Load a base world map for context
-    world = load_layer(COUNTRIES_SHP, "Admin-0 countries").to_crs(3857)
+    world = load_layer(COUNTRIES_SHP, "Admin-0 countries")
 
+    # ╔═ Country-level exposure summary ═════════════════════════╗
+    # 1. Aggregate at-risk cities by country
+    exposure_by_ctry = (
+        cities_tiered
+        .groupby("ADM0NAME")
+        .agg(exposed_pop=("POP_MAX", "sum"),
+             at_risk_cities=("NAME", "size"))
+        .sort_values("exposed_pop", ascending=False)
+    )
+
+    # 2. Attach to country polygons (left join keeps all countries for mapping)
+    world_w_exposure = world.to_crs(4326).merge(
+        exposure_by_ctry,
+        how="left",
+        left_on="NAME",
+        right_index=True,
+        validate="1:1",
+    )
+
+    # 3. Fill NaN with 0 for mapping
+    world_w_exposure["exposed_pop"] = world_w_exposure["exposed_pop"].fillna(0)
+    world_w_exposure["at_risk_cities"] = world_w_exposure["at_risk_cities"].fillna(0)
+
+    # ------------------ Static bar of top 15 countries ------------------
+    top15 = exposure_by_ctry.head(15)
+    plt.figure(figsize=(10, 6))
+    plt.barh(top15.index[::-1], top15["exposed_pop"][::-1] / 1e6, color="#fc8d59")
+    plt.xlabel("Population exposed (millions)")
+    plt.title("Top 15 Countries by Population in ≤100 km of a Volcano")
+    plt.tight_layout()
+    plt.show()
+
+    # ------------------ Folium choropleth ------------------
+    chor_map = folium.Map(location=[0, 20], zoom_start=2, tiles="CartoDB positron")
+
+    folium.Choropleth(
+        geo_data=world_w_exposure,
+        name="Country exposure",
+        data=world_w_exposure,
+        columns=["NAME", "exposed_pop"],
+        key_on="feature.properties.NAME",
+        fill_color="YlOrRd",
+        nan_fill_color="lightgray",
+        fill_opacity=0.8,
+        legend_name="Population in cities ≤100 km of a volcano",
+        bins=[0, 1e6, 5e6, 10e6, 25e6, 50e6, 100e6, 200e6],
+    ).add_to(chor_map)
+
+    # Add simple pop-up on click
+    style_no_border = {"weight": 0.3, "color": "gray", "fillOpacity": 0}
+    folium.GeoJson(
+        world_w_exposure,
+        style_function=lambda *_: style_no_border,
+        tooltip=folium.GeoJsonTooltip(
+            fields=["NAME", "exposed_pop", "at_risk_cities"],
+            aliases=["Country", "Exposed pop", "At-risk cities"],
+            localize=True,
+        ),
+    ).add_to(chor_map)
+
+    folium.LayerControl().add_to(chor_map)
+    display(chor_map)
+    # ╚══════════════════════════════════════════════════════════╝
+
+    # Use Mercator version for static plotting
+    world_merc = world.to_crs(3857)
     # Show a matplotlib overview
-    plot_static(world, volcanoes_merc, at_risk)
+    plot_static(world_merc, volcanoes_merc, at_risk)
 
     # Build and display the interactive web map (in Jupyter this shows inline)
     m = create_interactive_map(volcanoes, hazard_rings, cities_tiered, tier_tbl)
