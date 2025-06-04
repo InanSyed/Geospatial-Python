@@ -4,7 +4,7 @@ geospatial analysis of cities near Holocene volcanoes. this script pulls in volc
 city and country data, finds large cities within 100 km of a vent and plots the results.
 datasets used:
 
-- smithsonian volcanoes of the world - https://volcano.si.edu/database/
+- smithsonian volcanoes of the world - https://pacific-data.sprep.org/resource/volcanoes-world-holocene#:~:text=Global%20Volcanism%20Program%2C%202013,2013
 - natural earth populated places - https://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-populated-places/
 - natural earth admin 0 countries - https://www.naturalearthdata.com/downloads/50m-cultural-vectors/50m-admin-0-countries/
 """
