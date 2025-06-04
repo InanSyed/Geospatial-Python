@@ -374,11 +374,11 @@ def main() -> None:
         print(tier_tbl)
 
         from IPython.display import Markdown, display as ipydisplay
-        _hi = int(tier_tbl.loc.get("High", {}).get("Cities", 0))
-        _lo = int(tier_tbl.loc.get("Low", {}).get("Cities", 0))
+        _hi = int(tier_tbl.loc["High", "Cities"]) if "High" in tier_tbl.index else 0
+        _lo = int(tier_tbl.loc["Low", "Cities"]) if "Low" in tier_tbl.index else 0
         _pop = int(tier_tbl["Pop"].sum())
         msg = (
-            f"### hazard tier summary\n"
+            "### hazard tier summary\n"
             f"~{_hi} cities are ≤10 km; ~{_lo} are 50–100 km; total exposed pop ≈ {_pop:,}"
         )
         ipydisplay(Markdown(msg))
