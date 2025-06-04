@@ -1,3 +1,4 @@
+
 """Geospatial analysis of cities near Holocene volcanoes.
 
 This script loads volcano, city and country datasets, identifies major cities
@@ -18,7 +19,7 @@ from shapely.geometry import mapping
 # ----------------------------------------------------------------------
 # Paths & constants
 # ----------------------------------------------------------------------
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path("data")                   # project‑relative data folder
 
 VOLCANO_SHP = (
     BASE_DIR
@@ -272,6 +273,7 @@ def main() -> None:
         gpd.sjoin(cities_100k, volc_buf[["geometry"]], how="inner", predicate="within")
         .drop_duplicates(subset="NAME")
     )
+    at_risk = at_risk.drop(columns="index_right")   
     print(f"At-risk cities: {len(at_risk):,}")
 
     hazard_rings = compute_hazard_rings(volcanoes_merc)
@@ -285,8 +287,7 @@ def main() -> None:
     plot_static(world, volcanoes_merc, at_risk)
 
     m = create_interactive_map(volcanoes, hazard_rings, cities_tiered, tier_tbl)
-    m.save("volcano_cities_map.html")
-    print("Interactive map saved to volcano_cities_map.html")
+    display(m)
 
     plt.figure(figsize=(8, 6))
     top10 = at_risk.nlargest(10, "POP_MAX").sort_values("POP_MAX")
