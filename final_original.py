@@ -1,13 +1,13 @@
 # %% [markdown]
 """# Project Objectives & Data Sources
 
-geospatial analysis of cities near Holocene volcanoes. this script pulls in volcano,
-city and country data, finds large cities within 100 km of a vent and plots the results.
-datasets used:
+this notebook checks where large cities sit relative to volcanoes that erupted in the holocene. i'm using a 100 km threshold since ash clouds, lahars and other hazards can reach that far. it loads volcano, city and country data then maps the results.
 
-- smithsonian volcanoes of the world - https://volcano.si.edu/database/
-- natural earth populated places - https://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-populated-places/
-- natural earth admin 0 countries - https://www.naturalearthdata.com/downloads/50m-cultural-vectors/50m-admin-0-countries/
+
+datasets used:
+- **Smithsonian Volcanoes of the World:** https://volcano.si.edu/database/
+- **Natural Earth Populated Places:** https://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-populated-places/
+- **Natural Earth Admin 0 Countries:** https://www.naturalearthdata.com/downloads/50m-cultural-vectors/50m-admin-0-countries/
 """
 
 from __future__ import annotations
@@ -86,7 +86,13 @@ def inspect(gdf: gpd.GeoDataFrame, name: str) -> None:
 
 
 def compute_hazard_rings(volcanoes: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-    """make polygons for distance bands around volcanoes"""
+    """make polygons for distance bands around volcanoes
+
+    Returns
+    -------
+    GeoDataFrame
+        polygon rings (one row per tier) sharing the CRS of *volcanoes*.
+    """
 
     # distance bands to build. each tuple is (inner_km, outer_km, label)
     # the first one starts at 0 so it covers the area right around the vent
@@ -117,7 +123,13 @@ def compute_hazard_rings(volcanoes: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
 def classify_cities(
     cities: gpd.GeoDataFrame, volcanoes: gpd.GeoDataFrame
 ) -> gpd.GeoDataFrame:
-    """tag each city with a hazard tier based on its nearest volcano"""
+    """tag each city with a hazard tier based on its nearest volcano
+
+    Returns
+    -------
+    GeoDataFrame
+        city features plus hazard and distance columns.
+    """
 
     # use a spatial join to find the closest volcano and measure the distance
     # ``sjoin_nearest`` returns the index and distance in the layer's CRS
@@ -346,6 +358,18 @@ def main() -> None:
             Pop="sum", Cities="size"
         )
         print(tier_tbl)
+        from IPython.display import Markdown, display as ipydisplay
+
+        num_high = tier_tbl.loc["High", "Cities"]
+        num_low = tier_tbl.loc["Low", "Cities"]
+        total_pop = int(tier_tbl["Pop"].sum())
+        tier_msg = (
+            f"### hazard spread\n"
+            f"~{num_high} cities are ≤10 km; "
+            f"~{num_low} are 50–100 km; "
+            f"total exposed pop ≈ {total_pop:,}"
+        )
+        ipydisplay(Markdown(tier_msg))
 
         # load a base world map for context
         world = load_layer(COUNTRIES_SHP, "Admin-0 countries")
@@ -440,6 +464,12 @@ def main() -> None:
         summary_md += f"total exposed pop: {tier_tbl['Pop'].sum():,.0f}\n"
         summary_md += f"top country: {exposure_by_ctry.index[0]} ({int(exposure_by_ctry.iloc[0].exposed_pop):,})"
         ipydisplay(Markdown(summary_md))
+        # %% [markdown]
+        """### Limitations & next steps
+- mercator distortion
+- buffer-radius simplification
+- could weight by VEI or use population grids
+"""
 
     except FileNotFoundError as e:
         print(f"missing data: {e}")
@@ -447,3 +477,7 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+# %%
+"""
+!pip install geopandas shapely folium matplotlib pandas
+"""
