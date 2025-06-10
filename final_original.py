@@ -24,8 +24,8 @@ from shapely.geometry import mapping
 # ----------------------------------------------------------------------
 # paths & constants
 # ----------------------------------------------------------------------
-# root directory where all datasets live relative to this repo
-BASE_DIR = Path("data")
+# root directory where all datasets live relative to this script
+BASE_DIR = Path(__file__).resolve().parent
 
 # path to the shapefile with point locations of Holocene volcanoes
 VOLCANO_SHP = (
@@ -373,15 +373,16 @@ def main() -> None:
         )
         print(tier_tbl)
 
-        from IPython.display import Markdown, display as ipydisplay
-        _hi = int(tier_tbl.loc.get("High", {}).get("Cities", 0))
-        _lo = int(tier_tbl.loc.get("Low", {}).get("Cities", 0))
+        from IPython.display import Markdown, display
+
+        _hi = int(tier_tbl.at["High", "Cities"]) if "High" in tier_tbl.index else 0
+        _lo = int(tier_tbl.at["Low", "Cities"]) if "Low" in tier_tbl.index else 0
         _pop = int(tier_tbl["Pop"].sum())
         msg = (
-            f"### hazard tier summary\n"
+            "### hazard tier summary\n"
             f"~{_hi} cities are ≤10 km; ~{_lo} are 50–100 km; total exposed pop ≈ {_pop:,}"
         )
-        ipydisplay(Markdown(msg))
+        display(Markdown(msg))
 
         # load a base world map for context
         world = load_layer(COUNTRIES_SHP, "Admin-0 countries")
@@ -470,12 +471,12 @@ def main() -> None:
         plt.show()
 
         # drop a quick markdown summary so it's easy to see the headline numbers
-        from IPython.display import Markdown, display as ipydisplay
+        from IPython.display import Markdown, display
 
         summary_md = f"""### quick summary\n"""
         summary_md += f"total exposed pop: {tier_tbl['Pop'].sum():,.0f}\n"
         summary_md += f"top country: {exposure_by_ctry.index[0]} ({int(exposure_by_ctry.iloc[0].exposed_pop):,})"
-        ipydisplay(Markdown(summary_md))
+        display(Markdown(summary_md))
 
         limits_md = (
             "### Limitations & next steps\n"
@@ -483,7 +484,7 @@ def main() -> None:
             "- Buffer-radius simplification\n"
             "- Could weight by VEI or use population grids."
         )
-        ipydisplay(Markdown(limits_md))
+        display(Markdown(limits_md))
 
     except FileNotFoundError as e:
         print(f"missing data: {e}")
