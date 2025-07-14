@@ -28,15 +28,20 @@ from shapely.geometry import mapping
 BASE_DIR = Path(__file__).resolve().parent
 
 # path to the shapefile with point locations of Holocene volcanoes
-VOLCANO_SHP = (
-    BASE_DIR
-    / "Global_2013_HoloceneVolcanoes_SmithsonianVOTW"
-    / "Smithsonian_VOTW_Holocene_VolcanoesPoint.shp"
+VOLCANO_SHP = BASE_DIR.joinpath(
+    "Global_2013_HoloceneVolcanoes_SmithsonianVOTW",
+    "Smithsonian_VOTW_Holocene_VolcanoesPoint.shp",
 )
 # path to the world populated places dataset from natural earth
-CITIES_SHP = BASE_DIR / "ne_10m_populated_places" / "ne_10m_populated_places.shp"
+CITIES_SHP = BASE_DIR.joinpath(
+    "ne_10m_populated_places",
+    "ne_10m_populated_places.shp",
+)
 # path to the country boundaries dataset from natural earth
-COUNTRIES_SHP = BASE_DIR / "ne_50m_admin_0_countries" / "ne_50m_admin_0_countries.shp"
+COUNTRIES_SHP = BASE_DIR.joinpath(
+    "ne_50m_admin_0_countries",
+    "ne_50m_admin_0_countries.shp",
+)
 
 # colours used for different hazard tiers when plotting
 COLOR = {
@@ -60,6 +65,10 @@ def load_layer(path: Path, name: str) -> gpd.GeoDataFrame:
 
     # read with geopandas (shapefile, geojson, ...)
     gdf = gpd.read_file(path)
+
+    # shapefiles bundled with this repo lack a .prj so they load without a CRS
+    if gdf.crs is None:
+        gdf.set_crs("EPSG:4326", inplace=True)
 
     # bail if the dataset unexpectedly contains no records
     if gdf.empty:
@@ -473,7 +482,7 @@ def main() -> None:
         # drop a quick markdown summary so it's easy to see the headline numbers
         from IPython.display import Markdown, display
 
-        summary_md = f"""### quick summary\n"""
+        summary_md = "### quick summary\n"
         summary_md += f"total exposed pop: {tier_tbl['Pop'].sum():,.0f}\n"
         summary_md += f"top country: {exposure_by_ctry.index[0]} ({int(exposure_by_ctry.iloc[0].exposed_pop):,})"
         display(Markdown(summary_md))
